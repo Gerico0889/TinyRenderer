@@ -8,11 +8,26 @@ constexpr TGAColor red = {0, 0, 255, 255};
 constexpr TGAColor blue = {255, 128, 64, 255};
 constexpr TGAColor yellow = {0, 200, 255, 255};
 
-void drawLine(const int ax, const int ay, const int bx, const int by, TGAImage& framebuffer, const TGAColor& color) {
-    for (float t = 0; t <= 1; t += .02) {
-        float xt = std::round(ax + t * (bx - ax));
-        float yt = std::round(ay + t * (by - ay));
-        framebuffer.set(xt, yt, color);
+void drawLine(int ax, int ay, int bx, int by, TGAImage& framebuffer, const TGAColor& color) {
+    bool steep = std::abs(ay - by) > std::abs(ax - bx);
+    if (steep) {
+        std::swap(ax, ay);
+        std::swap(bx, by);
+    }
+
+    if (ax > bx) {
+        std::swap(ax, bx);
+        std::swap(ay, by);
+    }
+
+    for (float x = ax; x <= bx; ++x) {
+        float t = (x - ax) / static_cast<float>(bx - ax);
+        int y = std::round(ay + (by - ay) * t);
+        if (steep) {
+            framebuffer.set(y, x, color);
+        } else {
+            framebuffer.set(x, y, color);
+        }
     }
 }
 
@@ -28,10 +43,6 @@ int main(int argc, char** argv) {
     drawLine(ax, ay, bx, by, framebuffer, red);
     drawLine(ax, ay, cx, cy, framebuffer, green);
     drawLine(cx, cy, bx, by, framebuffer, blue);
-
-    framebuffer.set(ax, ay, white);
-    framebuffer.set(bx, by, white);
-    framebuffer.set(cx, cy, white);
 
     framebuffer.write_tga_file("framebuffer.tga");
     return 0;
