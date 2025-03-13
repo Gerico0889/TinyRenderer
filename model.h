@@ -1,5 +1,7 @@
 #pragma once
 
+#include "vertex.h"
+
 #include <string>
 #include <vector>
 
@@ -8,10 +10,10 @@ public:
     Model() = default;
 
     void loadFromObj(const std::string& file_name);
-    std::vector<float> getVertices();
+    std::vector<Vertex> getVertices();
     std::vector<int> getFaces();
 
 private:
-    std::vector<float> _vertices;
+    std::vector<Vertex> _vertices;
     std::vector<int> _faces;
 };
