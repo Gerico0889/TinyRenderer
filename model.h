@@ -16,6 +16,8 @@ public:
     std::vector<std::tuple<int, int, int>> getFaces();
 
 private:
+    int parseFaceIndex(const std::string& face);
+
     std::vector<Vertex> _vertices;
     std::vector<std::tuple<int, int, int>> _faces;
 };

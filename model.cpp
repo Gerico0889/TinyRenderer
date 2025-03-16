@@ -39,45 +39,15 @@ void Model::loadFacesFromObjs(const std::string& file_name) {
 
     char first_char;
     std::string face1, face2, face3;
-    int face1_n, face2_n, face3_n;
     while (model_file >> first_char >> face1 >> face2 >> face3) {
         if (first_char == 'f') {
-            std::string result{};
-            for (auto character : face1) {
-                if (character == '/') {
-                    face1_n = std::stoi(result);
-                    result = {};
-                    break;
-                }
-
-                result += character;
-            }
-
-            for (auto character : face2) {
-                if (character == '/') {
-                    face2_n = std::stoi(result);
-                    result = {};
-                    break;
-                }
-
-                result += character;
-            }
-
-            for (auto character : face3) {
-                if (character == '/') {
-                    face3_n = std::stoi(result);
-                    result = {};
-                    break;
-                }
-
-                result += character;
-            }
-
-            // The indices in the file are 1-based indexing,
-            // we need to decrement by 1 to match the vertices
-            _faces.emplace_back(--face1_n, --face2_n, --face3_n);
+            _faces.emplace_back(parseFaceIndex(face1), parseFaceIndex(face2), parseFaceIndex(face3));
         }
     }
+}
+
+int Model::parseFaceIndex(const std::string& face) {
+    return std::stoi(face.substr(0, face.find('/'))) - 1;
 }
 
 std::vector<Vertex> Model::getVertices() {
