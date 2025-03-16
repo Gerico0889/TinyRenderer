@@ -33,14 +33,20 @@ void drawLine(int ax, int ay, int bx, int by, TGAImage& framebuffer, const TGACo
     }
 }
 
-void drawLine3d(const Vertex& vertex1, const Vertex& vertex2, TGAImage& framebuffer, const TGAColor& color) {
-    float normalized_x1 = (vertex1.getX() + 1) * 0.5 * framebuffer.width();
-    float normalized_y1 = (vertex1.getY() + 1) * 0.5 * framebuffer.height();
-    float normalized_x2 = (vertex2.getX() + 1) * 0.5 * framebuffer.width();
-    float normalized_y2 = (vertex2.getY() + 1) * 0.5 * framebuffer.height();
+Vertex normalize_vertex(const Vertex& vertex, const int width, const int height) {
+    float const normalized_x = (vertex.getX() + 1) * 0.5 * width;
+    float const normalized_y = (vertex.getY() + 1) * 0.5 * width;
+
+    return Vertex(normalized_x, normalized_y, vertex.getZ());
+}
+
+void drawLine(const Vertex& vertex1, const Vertex& vertex2, TGAImage& framebuffer, const TGAColor& color) {
+    auto const normalized_vertex1 = normalize_vertex(vertex1, framebuffer.width(), framebuffer.height());
+    auto const normalized_vertex2 = normalize_vertex(vertex2, framebuffer.width(), framebuffer.height());
+
     for (float t = 0; t <= 1; t += 0.01) {
-        int x = normalized_x1 + t * (normalized_x2 - normalized_x1);
-        int y = normalized_y1 + t * (normalized_y2 - normalized_y1);
+        int x = normalized_vertex1.getX() + t * (normalized_vertex2.getX() - normalized_vertex1.getX());
+        int y = normalized_vertex1.getY() + t * (normalized_vertex2.getY() - normalized_vertex1.getY());
 
         framebuffer.set(x, y, color);
     }
@@ -62,9 +68,9 @@ int main(int argc, char** argv) {
         auto const index2 = std::get<1>(indices);
         auto const index3 = std::get<2>(indices);
 
-        drawLine3d(vertices[index1], vertices[index2], framebuffer, red);
-        drawLine3d(vertices[index2], vertices[index3], framebuffer, red);
-        drawLine3d(vertices[index3], vertices[index1], framebuffer, red);
+        drawLine(vertices[index1], vertices[index2], framebuffer, red);
+        drawLine(vertices[index2], vertices[index3], framebuffer, red);
+        drawLine(vertices[index3], vertices[index1], framebuffer, red);
     }
 
     framebuffer.write_tga_file("framebuffer.tga");
