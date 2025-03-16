@@ -10,6 +10,8 @@ public:
     Vertex& operator=(Vertex&&) = default;
     ~Vertex() = default;
 
+    bool operator==(const Vertex& rhs) const;
+
     float getX() const;
     float getY() const;
     float getZ() const;
