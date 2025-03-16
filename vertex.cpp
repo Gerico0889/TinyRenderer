@@ -27,3 +27,9 @@ void Vertex::setY(const float y) {
 void Vertex::setZ(const float z) {
     _z = z;
 }
+Vertex Vertex::normalize_to_viewport(const Vertex& vertex, const int width, const int height) {
+    float const normalized_x = (vertex.getX() + 1) * 0.5 * width;
+    float const normalized_y = (vertex.getY() + 1) * 0.5 * width;
+
+    return Vertex(normalized_x, normalized_y, vertex.getZ());
+}

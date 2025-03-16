@@ -2,7 +2,6 @@
 #include "tgaimage.h"
 
 #include <cmath>
-#include <iostream>
 
 constexpr TGAColor white = {255, 255, 255, 255}; // attention, BGRA order
 constexpr TGAColor green = {0, 255, 0, 255};
@@ -10,7 +9,15 @@ constexpr TGAColor red = {0, 0, 255, 255};
 constexpr TGAColor blue = {255, 128, 64, 255};
 constexpr TGAColor yellow = {0, 200, 255, 255};
 
-void drawLine(int ax, int ay, int bx, int by, TGAImage& framebuffer, const TGAColor& color) {
+void drawLine(const Vertex& vertex1, const Vertex& vertex2, TGAImage& framebuffer, const TGAColor& color) {
+    auto const normalized_vertex1 = Vertex::normalize_to_viewport(vertex1, framebuffer.width(), framebuffer.height());
+    auto const normalized_vertex2 = Vertex::normalize_to_viewport(vertex2, framebuffer.width(), framebuffer.height());
+
+    auto ax = normalized_vertex1.getX();
+    auto ay = normalized_vertex1.getY();
+    auto bx = normalized_vertex2.getX();
+    auto by = normalized_vertex2.getY();
+
     bool steep = std::abs(ay - by) > std::abs(ax - bx);
     if (steep) {
         std::swap(ax, ay);
@@ -30,25 +37,6 @@ void drawLine(int ax, int ay, int bx, int by, TGAImage& framebuffer, const TGACo
         } else {
             framebuffer.set(x, y, color);
         }
-    }
-}
-
-Vertex normalize_vertex(const Vertex& vertex, const int width, const int height) {
-    float const normalized_x = (vertex.getX() + 1) * 0.5 * width;
-    float const normalized_y = (vertex.getY() + 1) * 0.5 * width;
-
-    return Vertex(normalized_x, normalized_y, vertex.getZ());
-}
-
-void drawLine(const Vertex& vertex1, const Vertex& vertex2, TGAImage& framebuffer, const TGAColor& color) {
-    auto const normalized_vertex1 = normalize_vertex(vertex1, framebuffer.width(), framebuffer.height());
-    auto const normalized_vertex2 = normalize_vertex(vertex2, framebuffer.width(), framebuffer.height());
-
-    for (float t = 0; t <= 1; t += 0.01) {
-        int x = normalized_vertex1.getX() + t * (normalized_vertex2.getX() - normalized_vertex1.getX());
-        int y = normalized_vertex1.getY() + t * (normalized_vertex2.getY() - normalized_vertex1.getY());
-
-        framebuffer.set(x, y, color);
     }
 }
 

@@ -18,6 +18,8 @@ public:
     void setY(const float y);
     void setZ(const float z);
 
+    static Vertex normalize_to_viewport(const Vertex& vertex, const int width, const int height);
+
 private:
     float _x;
     float _y;
