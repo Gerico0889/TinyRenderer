@@ -43,6 +43,7 @@ Vertex Vertex::normalize_to_viewport(const Vertex& vertex, const int width, cons
 
     float const normalized_x = (vertex.getX() + 1) * 0.5 * width;
     float const normalized_y = (vertex.getY() + 1) * 0.5 * width;
+    float const normalized_z = (vertex.getZ() + 1) * 0.5 * 255;
 
-    return Vertex(normalized_x, normalized_y, vertex.getZ());
+    return Vertex(normalized_x, normalized_y, normalized_z);
 }

@@ -62,7 +62,7 @@ void drawLine(const Vertex& vertex1, const Vertex& vertex2, TGAImage& framebuffe
     }
 }
 
-void drawTriangle(const Vertex& vertex1, const Vertex& vertex2, const Vertex& vertex3, TGAImage& framebuffer, const TGAColor& color) {
+void drawTriangle(const Vertex& vertex1, const Vertex& vertex2, const Vertex& vertex3, TGAImage& framebuffer, TGAImage& zbuffer, const TGAColor& color) {
     auto const normalized_vertex1 = Vertex::normalize_to_viewport(vertex1, framebuffer.width(), framebuffer.height());
     auto const normalized_vertex2 = Vertex::normalize_to_viewport(vertex2, framebuffer.width(), framebuffer.height());
     auto const normalized_vertex3 = Vertex::normalize_to_viewport(vertex3, framebuffer.width(), framebuffer.height());
@@ -80,45 +80,50 @@ void drawTriangle(const Vertex& vertex1, const Vertex& vertex2, const Vertex& ve
             const auto beta = signedTriangleArea(Vertex(x, y, 0), normalized_vertex3, normalized_vertex1) / total_area;
             const auto gamma = signedTriangleArea(Vertex(x, y, 0), normalized_vertex1, normalized_vertex2) / total_area;
 
+            const unsigned char z = static_cast<unsigned char>(normalized_vertex1.getZ() * alpha + normalized_vertex2.getZ() * beta + normalized_vertex3.getZ() * gamma);
+
             if (alpha < 0 || beta < 0 || gamma < 0) {
                 continue;
             }
 
-            const auto z_1 = static_cast<unsigned char>(normalized_vertex1.getZ() * alpha);
-            const auto z_2 = static_cast<unsigned char>(normalized_vertex2.getZ() * beta);
-            const auto z_3 = static_cast<unsigned char>(normalized_vertex3.getZ() * gamma);
+            if (z < zbuffer.get(x, y)[0]) {
+                continue;
+            }
 
-            framebuffer.set(x, y, {z_1, z_2, z_3, 255});
+            framebuffer.set(x, y, color);
+            zbuffer.set(x, y, {z});
         }
     }
 }
 
 int main(int argc, char** argv) {
-    constexpr int width = 1000;
-    constexpr int height = 1000;
+    constexpr int width = 2000;
+    constexpr int height = 2000;
     TGAImage framebuffer(width, height, TGAImage::RGB);
+    TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
 
-    // Model model;
-    // std::string file_name{"african_head/african_head.obj"};
-    // model.loadVerticesFromObj(file_name);
-    // model.loadFacesFromObjs(file_name);
-    //
-    // auto const& vertices = model.getVertices();
-    // auto const& faces = model.getFaces();
-    // for (auto const& indices : faces) {
-    //     auto const index1 = std::get<0>(indices);
-    //     auto const index2 = std::get<1>(indices);
-    //     auto const index3 = std::get<2>(indices);
-    //
-    //     TGAColor random_color;
-    //     for (int c = 0; c < 3; c++)
-    //         random_color[c] = std::rand() % 255;
-    //
-    //     drawTriangle(vertices[index1], vertices[index2], vertices[index3], framebuffer, random_color);
-    // }
+    Model model;
+    std::string file_name{"diablo3_pose/diablo3_pose.obj"};
+    model.loadVerticesFromObj(file_name);
+    model.loadFacesFromObjs(file_name);
 
-    drawTriangle(Vertex(170, 40, 255), Vertex(550, 390, 255), Vertex(230, 590, 255), framebuffer, red);
+    auto const& vertices = model.getVertices();
+    auto const& faces = model.getFaces();
+    for (auto const& indices : faces) {
+        auto const index1 = std::get<0>(indices);
+        auto const index2 = std::get<1>(indices);
+        auto const index3 = std::get<2>(indices);
+
+        TGAColor random_color;
+        for (int c = 0; c < 3; c++)
+            random_color[c] = std::rand() % 255;
+
+        drawTriangle(vertices[index1], vertices[index2], vertices[index3], framebuffer, zbuffer, random_color);
+    }
+
+    // drawTriangle(Vertex(170, 40, 255), Vertex(550, 390, 255), Vertex(230, 590, 255), framebuffer, red);
 
     framebuffer.write_tga_file("framebuffer.tga");
+    zbuffer.write_tga_file("zbuffer.tga");
     return 0;
 }
