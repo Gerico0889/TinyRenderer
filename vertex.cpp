@@ -37,6 +37,10 @@ bool Vertex::operator==(const Vertex& rhs) const {
 }
 
 Vertex Vertex::normalize_to_viewport(const Vertex& vertex, const int width, const int height) {
+    if (vertex.getX() < -1 || vertex.getX() > 1 || vertex.getY() < -1 || vertex.getY() > 1) {
+        return vertex;
+    }
+
     float const normalized_x = (vertex.getX() + 1) * 0.5 * width;
     float const normalized_y = (vertex.getY() + 1) * 0.5 * width;
 

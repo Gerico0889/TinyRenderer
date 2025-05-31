@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 
 constexpr TGAColor white = {255, 255, 255, 255}; // attention, BGRA order
 constexpr TGAColor green = {0, 255, 0, 255};
@@ -68,11 +69,11 @@ void drawTriangle(const Vertex& vertex1, const Vertex& vertex2, const Vertex& ve
 
     const auto [vertex_min, vertex_max] = findBoundingBox(normalized_vertex1, normalized_vertex2, normalized_vertex3);
     const auto total_area = signedTriangleArea(normalized_vertex1, normalized_vertex2, normalized_vertex3);
-    if (total_area < 1) {
+
+    if (total_area < 0) {
         return;
     }
 
-#pragma omp parallel
     for (int x = vertex_min.getX(); x <= vertex_max.getX(); ++x) {
         for (int y = vertex_min.getY(); y <= vertex_max.getY(); ++y) {
             const auto alpha = signedTriangleArea(Vertex(x, y, 0), normalized_vertex2, normalized_vertex3) / total_area;
@@ -82,38 +83,41 @@ void drawTriangle(const Vertex& vertex1, const Vertex& vertex2, const Vertex& ve
             if (alpha < 0 || beta < 0 || gamma < 0) {
                 continue;
             }
-            framebuffer.set(x, y, color);
+
+            const auto z_1 = static_cast<unsigned char>(normalized_vertex1.getZ() * alpha);
+            const auto z_2 = static_cast<unsigned char>(normalized_vertex2.getZ() * beta);
+            const auto z_3 = static_cast<unsigned char>(normalized_vertex3.getZ() * gamma);
+
+            framebuffer.set(x, y, {z_1, z_2, z_3, 255});
         }
     }
 }
 
 int main(int argc, char** argv) {
-    constexpr int width = 2000;
-    constexpr int height = 2000;
+    constexpr int width = 1000;
+    constexpr int height = 1000;
     TGAImage framebuffer(width, height, TGAImage::RGB);
 
-    Model model;
-    std::string file_name{"african_head/african_head.obj"};
-    model.loadVerticesFromObj(file_name);
-    model.loadFacesFromObjs(file_name);
+    // Model model;
+    // std::string file_name{"african_head/african_head.obj"};
+    // model.loadVerticesFromObj(file_name);
+    // model.loadFacesFromObjs(file_name);
+    //
+    // auto const& vertices = model.getVertices();
+    // auto const& faces = model.getFaces();
+    // for (auto const& indices : faces) {
+    //     auto const index1 = std::get<0>(indices);
+    //     auto const index2 = std::get<1>(indices);
+    //     auto const index3 = std::get<2>(indices);
+    //
+    //     TGAColor random_color;
+    //     for (int c = 0; c < 3; c++)
+    //         random_color[c] = std::rand() % 255;
+    //
+    //     drawTriangle(vertices[index1], vertices[index2], vertices[index3], framebuffer, random_color);
+    // }
 
-    auto const& vertices = model.getVertices();
-    auto const& faces = model.getFaces();
-    for (auto const& indices : faces) {
-        auto const index1 = std::get<0>(indices);
-        auto const index2 = std::get<1>(indices);
-        auto const index3 = std::get<2>(indices);
-
-        TGAColor random_color;
-        for (int c = 0; c < 3; c++)
-            random_color[c] = std::rand() % 255;
-
-        drawTriangle(vertices[index1], vertices[index2], vertices[index3], framebuffer, random_color);
-    }
-
-    // drawTriangle(Vertex(7, 45, 0), Vertex(35, 100, 0), Vertex(45, 60, 0), framebuffer, red);
-    // drawTriangle(Vertex(120, 35, 0), Vertex(90, 5, 0), Vertex(45, 110, 0), framebuffer, white);
-    // drawTriangle(Vertex(115, 83, 0), Vertex(80, 90, 0), Vertex(85, 120, 0), framebuffer, green);
+    drawTriangle(Vertex(170, 40, 255), Vertex(550, 390, 255), Vertex(230, 590, 255), framebuffer, red);
 
     framebuffer.write_tga_file("framebuffer.tga");
     return 0;
