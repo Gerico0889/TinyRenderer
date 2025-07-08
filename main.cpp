@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iostream>
 
 constexpr TGAColor white = {255, 255, 255, 255}; // attention, BGRA order
 constexpr TGAColor green = {0, 255, 0, 255};
@@ -11,34 +10,46 @@ constexpr TGAColor red = {0, 0, 255, 255};
 constexpr TGAColor blue = {255, 128, 64, 255};
 constexpr TGAColor yellow = {0, 200, 255, 255};
 
-std::pair<Vertex, Vertex> findBoundingBox(const Vertex& vertex1, const Vertex& vertex2, const Vertex& vertex3) {
-    auto const min_x = std::min({vertex1.getX(), vertex2.getX(), vertex3.getX()});
-    auto const min_y = std::min({vertex1.getY(), vertex2.getY(), vertex3.getY()});
-    auto const max_x = std::max({vertex1.getX(), vertex2.getX(), vertex3.getX()});
-    auto const max_y = std::max({vertex1.getY(), vertex2.getY(), vertex3.getY()});
+Vec3 normalize_to_viewport(const Vec3& vertex, const int width, const int height) {
+    if (vertex.x() < -1 || vertex.x() > 1 || vertex.y() < -1 || vertex.y() > 1 || vertex.z() < -1 || vertex.z() > 1) {
+        return vertex;
+    }
 
-    return {Vertex(min_x, min_y, 0), Vertex(max_x, max_y, 0)};
+    float const normalized_x = (vertex.x() + 1) * 0.5 * width;
+    float const normalized_y = (vertex.y() + 1) * 0.5 * width;
+    float const normalized_z = (vertex.z() + 1) * 0.5 * 255;
+
+    return Vec3(normalized_x, normalized_y, normalized_z);
 }
 
-double signedTriangleArea(const Vertex& vertex1, const Vertex& vertex2, const Vertex& vertex3) {
-    const auto ax = vertex1.getX();
-    const auto ay = vertex1.getY();
-    const auto bx = vertex2.getX();
-    const auto by = vertex2.getY();
-    const auto cx = vertex3.getX();
-    const auto cy = vertex3.getY();
+std::pair<Vec3, Vec3> findBoundingBox(const Vec3& vertex1, const Vec3& vertex2, const Vec3& vertex3) {
+    auto const min_x = std::min({vertex1.x(), vertex2.x(), vertex3.x()});
+    auto const min_y = std::min({vertex1.y(), vertex2.y(), vertex3.y()});
+    auto const max_x = std::max({vertex1.x(), vertex2.x(), vertex3.x()});
+    auto const max_y = std::max({vertex1.y(), vertex2.y(), vertex3.y()});
+
+    return {Vec3(min_x, min_y, 0), Vec3(max_x, max_y, 0)};
+}
+
+double signedTriangleArea(const Vec3& vertex1, const Vec3& vertex2, const Vec3& vertex3) {
+    const auto ax = vertex1.x();
+    const auto ay = vertex1.y();
+    const auto bx = vertex2.x();
+    const auto by = vertex2.y();
+    const auto cx = vertex3.x();
+    const auto cy = vertex3.y();
 
     return 0.5 * ((by - ay) * (bx + ax) + (cy - by) * (cx + bx) + (ay - cy) * (ax + cx));
 }
 
-void drawLine(const Vertex& vertex1, const Vertex& vertex2, TGAImage& framebuffer, const TGAColor& color) {
-    auto const normalized_vertex1 = Vertex::normalize_to_viewport(vertex1, framebuffer.width(), framebuffer.height());
-    auto const normalized_vertex2 = Vertex::normalize_to_viewport(vertex2, framebuffer.width(), framebuffer.height());
+void drawLine(const Vec3& vertex1, const Vec3& vertex2, TGAImage& framebuffer, const TGAColor& color) {
+    auto const normalized_vertex1 = normalize_to_viewport(vertex1, framebuffer.width(), framebuffer.height());
+    auto const normalized_vertex2 = normalize_to_viewport(vertex2, framebuffer.width(), framebuffer.height());
 
-    auto ax = normalized_vertex1.getX();
-    auto ay = normalized_vertex1.getY();
-    auto bx = normalized_vertex2.getX();
-    auto by = normalized_vertex2.getY();
+    auto ax = normalized_vertex1.x();
+    auto ay = normalized_vertex1.y();
+    auto bx = normalized_vertex2.x();
+    auto by = normalized_vertex2.y();
 
     bool steep = std::abs(ay - by) > std::abs(ax - bx);
     if (steep) {
@@ -62,10 +73,10 @@ void drawLine(const Vertex& vertex1, const Vertex& vertex2, TGAImage& framebuffe
     }
 }
 
-void drawTriangle(const Vertex& vertex1, const Vertex& vertex2, const Vertex& vertex3, TGAImage& framebuffer, TGAImage& zbuffer, const TGAColor& color) {
-    auto const normalized_vertex1 = Vertex::normalize_to_viewport(vertex1, framebuffer.width(), framebuffer.height());
-    auto const normalized_vertex2 = Vertex::normalize_to_viewport(vertex2, framebuffer.width(), framebuffer.height());
-    auto const normalized_vertex3 = Vertex::normalize_to_viewport(vertex3, framebuffer.width(), framebuffer.height());
+void drawTriangle(const Vec3& vertex1, const Vec3& vertex2, const Vec3& vertex3, TGAImage& framebuffer, TGAImage& zbuffer, const TGAColor& color) {
+    auto const normalized_vertex1 = normalize_to_viewport(vertex1, framebuffer.width(), framebuffer.height());
+    auto const normalized_vertex2 = normalize_to_viewport(vertex2, framebuffer.width(), framebuffer.height());
+    auto const normalized_vertex3 = normalize_to_viewport(vertex3, framebuffer.width(), framebuffer.height());
 
     const auto [vertex_min, vertex_max] = findBoundingBox(normalized_vertex1, normalized_vertex2, normalized_vertex3);
     const auto total_area = signedTriangleArea(normalized_vertex1, normalized_vertex2, normalized_vertex3);
@@ -74,13 +85,13 @@ void drawTriangle(const Vertex& vertex1, const Vertex& vertex2, const Vertex& ve
         return;
     }
 
-    for (int x = vertex_min.getX(); x <= vertex_max.getX(); ++x) {
-        for (int y = vertex_min.getY(); y <= vertex_max.getY(); ++y) {
-            const auto alpha = signedTriangleArea(Vertex(x, y, 0), normalized_vertex2, normalized_vertex3) / total_area;
-            const auto beta = signedTriangleArea(Vertex(x, y, 0), normalized_vertex3, normalized_vertex1) / total_area;
-            const auto gamma = signedTriangleArea(Vertex(x, y, 0), normalized_vertex1, normalized_vertex2) / total_area;
+    for (int x = vertex_min.x(); x <= vertex_max.x(); ++x) {
+        for (int y = vertex_min.y(); y <= vertex_max.y(); ++y) {
+            const auto alpha = signedTriangleArea(Vec3(x, y, 0), normalized_vertex2, normalized_vertex3) / total_area;
+            const auto beta = signedTriangleArea(Vec3(x, y, 0), normalized_vertex3, normalized_vertex1) / total_area;
+            const auto gamma = signedTriangleArea(Vec3(x, y, 0), normalized_vertex1, normalized_vertex2) / total_area;
 
-            const unsigned char z = static_cast<unsigned char>(normalized_vertex1.getZ() * alpha + normalized_vertex2.getZ() * beta + normalized_vertex3.getZ() * gamma);
+            const unsigned char z = static_cast<unsigned char>(normalized_vertex1.z() * alpha + normalized_vertex2.z() * beta + normalized_vertex3.z() * gamma);
 
             if (alpha < 0 || beta < 0 || gamma < 0) {
                 continue;
@@ -121,7 +132,7 @@ int main(int argc, char** argv) {
         drawTriangle(vertices[index1], vertices[index2], vertices[index3], framebuffer, zbuffer, random_color);
     }
 
-    // drawTriangle(Vertex(170, 40, 255), Vertex(550, 390, 255), Vertex(230, 590, 255), framebuffer, red);
+    // drawTriangle(Vec3(170, 40, 255), Vec3(550, 390, 255), Vec3(230, 590, 255), framebuffer, red);
 
     framebuffer.write_tga_file("framebuffer.tga");
     zbuffer.write_tga_file("zbuffer.tga");

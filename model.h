@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vertex.h"
+#include "vector3.h"
 
 #include <string>
 #include <tuple>
@@ -12,12 +12,12 @@ public:
 
     void loadVerticesFromObj(const std::string& file_name);
     void loadFacesFromObjs(const std::string& file_name);
-    std::vector<Vertex> getVertices();
+    std::vector<Vec3> getVertices();
     std::vector<std::tuple<int, int, int>> getFaces();
 
 private:
     int parseFaceIndex(const std::string& face);
 
-    std::vector<Vertex> _vertices;
+    std::vector<Vec3> _vertices;
     std::vector<std::tuple<int, int, int>> _faces;
 };

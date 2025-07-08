@@ -50,7 +50,7 @@ int Model::parseFaceIndex(const std::string& face) {
     return std::stoi(face.substr(0, face.find('/'))) - 1;
 }
 
-std::vector<Vertex> Model::getVertices() {
+std::vector<Vec3> Model::getVertices() {
     return _vertices;
 }
 
