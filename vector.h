@@ -88,7 +88,8 @@ inline Vector<N>::Vector() {
 
 template <std::size_t N>
 template <typename... Args, typename>
-inline Vector<N>::Vector(Args... args) : data{{static_cast<double>(args)...}} {
+inline Vector<N>::Vector(Args... args)
+    : data{{static_cast<double>(args)...}} {
 }
 
 template <std::size_t N>
@@ -184,3 +185,7 @@ inline std::ostream& operator<<(std::ostream& os, const Vector<N>& vec) {
     os << ")";
     return os;
 }
+
+using Vec2 = Vector<2>;
+using Vec3 = Vector<3>;
+using Vec4 = Vector<4>;
