@@ -9,9 +9,14 @@ class Vector {
 public:
     std::array<double, N> data; // Encapsulation is barely a concern here
 
-    Vector();
+    Vector() {
+        data.fill(0.0);
+    }
+
     template <typename... Args, typename = std::enable_if<sizeof...(Args) == N && (std::is_convertible_v<Args, double> && ...)>>
-    Vector(Args... args);
+    Vector(Args... args)
+        : data{{static_cast<double>(args)...}} {
+    }
 
     Vector(const Vector&) = default;
     Vector(Vector&&) = default;
@@ -19,17 +24,53 @@ public:
     Vector& operator=(Vector&) = default;
     ~Vector() = default;
 
-    double dot(const Vector& vector) const;
+    double dot(const Vector& vector) const {
+        double result = 0.0;
+        for (std::size_t i = 0; i < N; ++i) {
+            result += data[i] * vector.data[i];
+        }
+        return result;
+    }
 
-    Vector& operator+=(const Vector& vector);
-    Vector& operator-=(const Vector& vector);
-    Vector& operator*=(double scalar);
-    Vector& operator/=(double scalar);
+    Vector& operator+=(const Vector& other) {
+        for (std::size_t i = 0; i < N; ++i) {
+            data[i] += other.data[i];
+        }
+        return *this;
+    }
 
-    double& operator[](std::size_t index);
-    const double& operator[](std::size_t index) const;
+    Vector& operator-=(const Vector& other) {
+        for (std::size_t i = 0; i < N; ++i) {
+            data[i] -= other.data[i];
+        }
+        return *this;
+    }
 
-    static Vector zero();
+    Vector& operator*=(double scalar) {
+        for (std::size_t i = 0; i < N; ++i) {
+            data[i] *= scalar;
+        }
+        return *this;
+    }
+
+    Vector& operator/=(double scalar) {
+        for (std::size_t i = 0; i < N; ++i) {
+            data[i] /= scalar;
+        }
+        return *this;
+    }
+
+    double& operator[](std::size_t index) {
+        return data[index];
+    }
+
+    const double& operator[](std::size_t index) const {
+        return data[index];
+    }
+
+    static Vector zero() {
+        return Vector();
+    }
 
     /* Dimension specific accessors */
 
@@ -80,65 +121,6 @@ public:
             data[0] * other.data[1] - data[1] * other.data[0]);
     }
 };
-
-template <std::size_t N>
-inline Vector<N>::Vector() {
-    data.fill(0.0);
-}
-
-template <std::size_t N>
-template <typename... Args, typename>
-inline Vector<N>::Vector(Args... args)
-    : data{{static_cast<double>(args)...}} {
-}
-
-template <std::size_t N>
-inline double Vector<N>::dot(const Vector& vector) const {
-    double result = 0.0;
-    for (std::size_t i = 0; i < N; ++i) {
-        result += data[i] * vector.data[i];
-    }
-    return result;
-}
-
-template <std::size_t N>
-inline Vector<N>& Vector<N>::operator+=(const Vector& other) {
-    for (std::size_t i = 0; i < N; ++i) {
-        data[i] += other.data[i];
-    }
-    return *this;
-}
-
-template <std::size_t N>
-inline Vector<N>& Vector<N>::operator-=(const Vector& other) {
-    for (std::size_t i = 0; i < N; ++i) {
-        data[i] -= other.data[i];
-    }
-    return *this;
-}
-
-template <std::size_t N>
-inline Vector<N>& Vector<N>::operator*=(double scalar) {
-    for (std::size_t i = 0; i < N; ++i) {
-        data[i] *= scalar;
-    }
-    return *this;
-}
-
-template <std::size_t N>
-inline double& Vector<N>::operator[](std::size_t index) {
-    return data[index];
-}
-
-template <std::size_t N>
-inline const double& Vector<N>::operator[](std::size_t index) const {
-    return data[index];
-}
-
-template <std::size_t N>
-inline Vector<N> Vector<N>::zero() {
-    return Vector();
-}
 
 /* Non-member operator overloads */
 
