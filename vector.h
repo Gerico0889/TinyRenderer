@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cassert>
 #include <iostream>
 #include <ostream>
 
@@ -61,10 +62,12 @@ public:
     }
 
     double& operator[](std::size_t index) {
+        assert(index >= 0 && index <= N);
         return data[index];
     }
 
     const double& operator[](std::size_t index) const {
+        assert(index >= 0 && index <= N);
         return data[index];
     }
 
