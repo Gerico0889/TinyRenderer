@@ -77,47 +77,40 @@ public:
 
     /* Dimension specific accessors */
 
-    // x() and y() are available for N >= 2
-    std::enable_if_t<N >= 2, double&> x() {
+    // x() is available for N >= 2
+    double& x() requires(N >= 2) {
         return data[0];
     }
-    template <std::size_t M = N>
-    std::enable_if_t<M >= 2, const double&> x() const {
+    const double& x() const requires(N >= 2) {
         return data[0];
     }
 
-    template <std::size_t M = N>
-    std::enable_if_t<M >= 2, double&> y() {
+    // y() is available for N >= 2
+    double& y() requires(N >= 2) {
         return data[1];
     }
-    template <std::size_t M = N>
-    std::enable_if_t<M >= 2, const double&> y() const {
+    const double& y() const requires(N >= 2) {
         return data[1];
     }
 
     // z() is available for N >= 3
-    template <std::size_t M = N>
-    std::enable_if_t<M >= 3, double&> z() {
+    double& z() requires(N >= 3) {
         return data[2];
     }
-    template <std::size_t M = N>
-    std::enable_if_t<M >= 3, const double&> z() const {
+    const double& z() const requires(N >= 3) {
         return data[2];
     }
 
     // w() is available for N >= 4
-    template <std::size_t M = N>
-    std::enable_if_t<M >= 4, double&> w() {
+    double& w() requires(N >= 4) {
         return data[3];
     }
-    template <std::size_t M = N>
-    std::enable_if_t<M >= 4, const double&> w() const {
+    const double& w() const requires(N >= 4) {
         return data[3];
     }
 
-    // Cross product (only for N=3)
-    template <std::size_t M = N>
-    std::enable_if_t<M == 3, Vector<3>> cross(const Vector<3>& other) const {
+    // Cross product (only for N == 3)
+    Vector<3> cross(const Vector<3>& other) const requires(N == 3) {
         return Vector<3>(
             data[1] * other.data[2] - data[2] * other.data[1],
             data[2] * other.data[0] - data[0] * other.data[2],
