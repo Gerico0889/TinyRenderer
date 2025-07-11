@@ -52,6 +52,11 @@ Vec3 rotate(Vec3 vector) {
     return y_rotation * vector;
 }
 
+Vec3 perspective(Vec3 vector) {
+    const double camera_z = 3.;
+    return vector / (1 - vector.z() / camera_z);
+}
+
 Vec3 project(Vec3 vector, int width, int height) {
     return {
         (vector.x() + 1.) * width / 2,
@@ -111,9 +116,9 @@ int main(int argc, char** argv) {
         auto const index2 = std::get<1>(indices);
         auto const index3 = std::get<2>(indices);
 
-        auto const vertex1 = project(rotate(vertices[index1]), width, height);
-        auto const vertex2 = project(rotate(vertices[index2]), width, height);
-        auto const vertex3 = project(rotate(vertices[index3]), width, height);
+        auto const vertex1 = project(perspective(rotate(vertices[index1])), width, height);
+        auto const vertex2 = project(perspective(rotate(vertices[index2])), width, height);
+        auto const vertex3 = project(perspective(rotate(vertices[index3])), width, height);
 
         TGAColor random_color;
         for (int c = 0; c < 3; c++)
@@ -125,6 +130,6 @@ int main(int argc, char** argv) {
     // drawTriangle(Vec3(170, 40, 255), Vec3(550, 390, 255), Vec3(230, 590, 255), framebuffer, red);
 
     framebuffer.write_tga_file("framebuffer.tga");
-    // zbuffer.write_tga_file("zbuffer.tga");
+    zbuffer.write_tga_file("zbuffer.tga");
     return 0;
 }
