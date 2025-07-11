@@ -1,14 +1,16 @@
+#include "matrix.h"
 #include "model.h"
 #include "tgaimage.h"
+#include "vector.h"
 
 #include <algorithm>
 #include <cmath>
 
-constexpr TGAColor white = {255, 255, 255, 255}; // attention, BGRA order
-constexpr TGAColor green = {0, 255, 0, 255};
-constexpr TGAColor red = {0, 0, 255, 255};
-constexpr TGAColor blue = {255, 128, 64, 255};
-constexpr TGAColor yellow = {0, 200, 255, 255};
+constexpr TGAColor white = {{255, 255, 255, 255}}; // attention, BGRA order
+constexpr TGAColor green = {{0, 255, 0, 255}};
+constexpr TGAColor red = {{0, 0, 255, 255}};
+constexpr TGAColor blue = {{255, 128, 64, 255}};
+constexpr TGAColor yellow = {{0, 200, 255, 255}};
 
 Vec3 normalize_to_viewport(const Vec3& vertex, const int width, const int height) {
     if (vertex.x() < -1 || vertex.x() > 1 || vertex.y() < -1 || vertex.y() > 1 || vertex.z() < -1 || vertex.z() > 1) {
@@ -42,36 +44,20 @@ double signedTriangleArea(const Vec3& vertex1, const Vec3& vertex2, const Vec3& 
     return 0.5 * ((by - ay) * (bx + ax) + (cy - by) * (cx + bx) + (ay - cy) * (ax + cx));
 }
 
-void drawLine(const Vec3& vertex1, const Vec3& vertex2, TGAImage& framebuffer, const TGAColor& color) {
-    auto const normalized_vertex1 = normalize_to_viewport(vertex1, framebuffer.width(), framebuffer.height());
-    auto const normalized_vertex2 = normalize_to_viewport(vertex2, framebuffer.width(), framebuffer.height());
-
-    auto ax = normalized_vertex1.x();
-    auto ay = normalized_vertex1.y();
-    auto bx = normalized_vertex2.x();
-    auto by = normalized_vertex2.y();
-
-    bool steep = std::abs(ay - by) > std::abs(ax - bx);
-    if (steep) {
-        std::swap(ax, ay);
-        std::swap(bx, by);
-    }
-
-    if (ax > bx) {
-        std::swap(ax, bx);
-        std::swap(ay, by);
-    }
-
-    for (int x = ax; x <= bx; ++x) {
-        float t = (x - ax) / static_cast<float>(bx - ax);
-        int y = std::round(ay + (by - ay) * t);
-        if (steep) {
-            framebuffer.set(y, x, color);
-        } else {
-            framebuffer.set(x, y, color);
-        }
-    }
+Vec3 rotate(Vec3 vector) {
+    const double angle = M_PI / 6;
+    const Matrix<3, 3> y_rotation(std::cos(angle), 0, std::sin(angle),
+                                  0, 1, 0,
+                                  -std::sin(angle), 0, std::cos(angle));
+    return y_rotation * vector;
 }
+
+Vec3 project(Vec3 vector, int width, int height) {
+    return {
+        (vector.x() + 1.) * width / 2,
+        (vector.y() + 1.) * height / 2,
+        (vector.z() + 1.) * 255. / 2};
+};
 
 void drawTriangle(const Vec3& vertex1, const Vec3& vertex2, const Vec3& vertex3, TGAImage& framebuffer, TGAImage& zbuffer, const TGAColor& color) {
     auto const normalized_vertex1 = normalize_to_viewport(vertex1, framebuffer.width(), framebuffer.height());
@@ -102,7 +88,7 @@ void drawTriangle(const Vec3& vertex1, const Vec3& vertex2, const Vec3& vertex3,
             }
 
             framebuffer.set(x, y, color);
-            zbuffer.set(x, y, {z});
+            zbuffer.set(x, y, {{z}});
         }
     }
 }
@@ -114,7 +100,7 @@ int main(int argc, char** argv) {
     TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
 
     Model model;
-    std::string file_name{"diablo3_pose/diablo3_pose.obj"};
+    std::string file_name{"african_head/african_head.obj"};
     model.loadVerticesFromObj(file_name);
     model.loadFacesFromObjs(file_name);
 
@@ -125,16 +111,20 @@ int main(int argc, char** argv) {
         auto const index2 = std::get<1>(indices);
         auto const index3 = std::get<2>(indices);
 
+        auto const vertex1 = project(rotate(vertices[index1]), width, height);
+        auto const vertex2 = project(rotate(vertices[index2]), width, height);
+        auto const vertex3 = project(rotate(vertices[index3]), width, height);
+
         TGAColor random_color;
         for (int c = 0; c < 3; c++)
             random_color[c] = std::rand() % 255;
 
-        drawTriangle(vertices[index1], vertices[index2], vertices[index3], framebuffer, zbuffer, random_color);
+        drawTriangle(vertex1, vertex2, vertex3, framebuffer, zbuffer, random_color);
     }
 
     // drawTriangle(Vec3(170, 40, 255), Vec3(550, 390, 255), Vec3(230, 590, 255), framebuffer, red);
 
     framebuffer.write_tga_file("framebuffer.tga");
-    zbuffer.write_tga_file("zbuffer.tga");
+    // zbuffer.write_tga_file("zbuffer.tga");
     return 0;
 }
