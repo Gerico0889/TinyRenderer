@@ -16,6 +16,17 @@ public:
     Matrix& operator=(Matrix&) = default;
     ~Matrix() = default;
 
+    template <typename... Args,
+              typename = std::enable_if_t<sizeof...(Args) == NRow * NCol && (std::is_convertible_v<Args, double> && ...)>>
+    Matrix(Args... args) {
+        const double values[] = {static_cast<double>(args)...};
+        for (std::size_t i = 0; i < NRow; ++i) {
+            for (std::size_t j = 0; j < NCol; ++j) {
+                rows[i][j] = values[i * NCol + j];
+            }
+        }
+    }
+
     Vector<NCol>& operator[](const std::size_t index) {
         assert(index >= 0 && index < NRow);
         return rows[index];
@@ -47,12 +58,12 @@ public:
         Matrix<Row, Col> result;
 
         auto r = 0;
-        for (auto i = 0; i < Row; ++i) {
+        for (std::size_t i = 0; i < Row; ++i) {
             if (i == row) {
                 continue;
             }
             auto c = 0;
-            for (int j = 0; j < Col; ++j) {
+            for (std::size_t j = 0; j < Col; ++j) {
                 if (j == col) {
                     continue;
                 }
@@ -112,53 +123,69 @@ public:
     }
 };
 
-template <int R1, int C1, int C2>
+template <std::size_t NRow, std::size_t NCol>
+Vector<NCol> operator*(const Vector<NRow>& lhs, const Matrix<NRow, NCol>& rhs) {
+    return (Matrix<1, NRow>{{lhs}} * rhs)[0];
+}
+
+template <std::size_t NRow, std::size_t NCol>
+Vector<NRow> operator*(const Matrix<NRow, NCol>& lhs, const Vector<NCol>& rhs) {
+    Vector<NRow> result;
+    for (std::size_t i = 0; i < NRow; ++i) {
+        for (std::size_t j = 0; j < NCol; ++j) {
+            result[i] += lhs[i][j] * rhs[j];
+        }
+    }
+    return result;
+}
+
+template <std::size_t R1, std::size_t C1, std::size_t C2>
 Matrix<R1, C2> operator*(const Matrix<R1, C1>& lhs, const Matrix<C1, C2>& rhs) {
     Matrix<R1, C2> result;
-    for (int i = R1; i--;)
-        for (int j = C2; j--;)
-            for (int k = C1; k--; result[i][j] += lhs[i][k] * rhs[k][j])
+    for (std::size_t i = R1; i--;)
+        for (std::size_t j = C2; j--;)
+            for (std::size_t k = C1; k--; result[i][j] += lhs[i][k] * rhs[k][j])
                 ;
     return result;
 }
 
-template <int NRow, int NCol>
+template <std::size_t NRow, std::size_t NCol>
 Matrix<NRow, NCol> operator*(const Matrix<NRow, NCol>& lhs, const double& val) {
     Matrix<NRow, NCol> result;
-    for (int i = NRow; i--; result[i] = lhs[i] * val)
+    for (std::size_t i = NRow; i--; result[i] = lhs[i] * val)
         ;
     return result;
 }
 
-template <int NRow, int NCol>
+template <std::size_t NRow, std::size_t NCol>
 Matrix<NRow, NCol> operator/(const Matrix<NRow, NCol>& lhs, const double& val) {
     Matrix<NRow, NCol> result;
-    for (int i = NRow; i--; result[i] = lhs[i] / val)
+    for (std::size_t i = NRow; i--; result[i] = lhs[i] / val)
         ;
     return result;
 }
 
-template <int NRow, int NCol>
+template <std::size_t NRow, std::size_t NCol>
 Matrix<NRow, NCol> operator+(const Matrix<NRow, NCol>& lhs, const Matrix<NRow, NCol>& rhs) {
     Matrix<NRow, NCol> result;
-    for (int i = NRow; i--;)
-        for (int j = NCol; j--; result[i][j] = lhs[i][j] + rhs[i][j])
+    for (std::size_t i = NRow; i--;)
+        for (std::size_t j = NCol; j--; result[i][j] = lhs[i][j] + rhs[i][j])
             ;
     return result;
 }
 
-template <int NRow, int NCol>
+template <std::size_t NRow, std::size_t NCol>
 Matrix<NRow, NCol> operator-(const Matrix<NRow, NCol>& lhs, const Matrix<NRow, NCol>& rhs) {
     Matrix<NRow, NCol> result;
-    for (int i = NRow; i--;)
-        for (int j = NCol; j--; result[i][j] = lhs[i][j] - rhs[i][j])
+    for (std::size_t i = NRow; i--;)
+        for (std::size_t j = NCol; j--; result[i][j] = lhs[i][j] - rhs[i][j])
             ;
     return result;
 }
 
-template <int NRow, int NCol>
+template <std::size_t NRow, std::size_t NCol>
 std::ostream& operator<<(std::ostream& out, const Matrix<NRow, NCol>& m) {
-    for (int i = 0; i < NRow; i++)
+    for (std::size_t i = 0; i < NRow; i++)
         out << m[i] << std::endl;
     return out;
 }
