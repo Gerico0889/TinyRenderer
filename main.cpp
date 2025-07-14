@@ -12,6 +12,8 @@ constexpr TGAColor red = {{0, 0, 255, 255}};
 constexpr TGAColor blue = {{255, 128, 64, 255}};
 constexpr TGAColor yellow = {{0, 200, 255, 255}};
 
+Matrix<4, 4> Viewport, Modelview, Perspective;
+
 Vec3 normalize_to_viewport(const Vec3& vertex, const int width, const int height) {
     if (vertex.x() < -1 || vertex.x() > 1 || vertex.y() < -1 || vertex.y() > 1 || vertex.z() < -1 || vertex.z() > 1) {
         return vertex;
@@ -52,9 +54,11 @@ Vec3 rotate(Vec3 vector) {
     return y_rotation * vector;
 }
 
-Vec3 perspective(Vec3 vector) {
-    const double camera_z = 3.;
-    return vector / (1 - vector.z() / camera_z);
+void perspective(const double focal) {
+    Perspective = Matrix<4, 4>(1, 0, 0, 0,
+                               0, 1, 0, 0,
+                               0, 0, 1, 0,
+                               0, 0, -1 / focal, 1);
 }
 
 Vec3 project(Vec3 vector, int width, int height) {
@@ -64,36 +68,51 @@ Vec3 project(Vec3 vector, int width, int height) {
         (vector.z() + 1.) * 255. / 2};
 };
 
-void drawTriangle(const Vec3& vertex1, const Vec3& vertex2, const Vec3& vertex3, TGAImage& framebuffer, TGAImage& zbuffer, const TGAColor& color) {
-    auto const normalized_vertex1 = normalize_to_viewport(vertex1, framebuffer.width(), framebuffer.height());
-    auto const normalized_vertex2 = normalize_to_viewport(vertex2, framebuffer.width(), framebuffer.height());
-    auto const normalized_vertex3 = normalize_to_viewport(vertex3, framebuffer.width(), framebuffer.height());
+void viewport(const Vec3& vertex, const int width, const int height) {
+    Viewport = Matrix<4, 4>(width / 2, 0, 0, vertex.x() + width / 2.,
+                            0, height / 2, 0, vertex.y() + height / 2.,
+                            0, 0, 1, 0,
+                            0, 0, 0, 1);
+}
 
-    const auto [vertex_min, vertex_max] = findBoundingBox(normalized_vertex1, normalized_vertex2, normalized_vertex3);
-    const auto total_area = signedTriangleArea(normalized_vertex1, normalized_vertex2, normalized_vertex3);
+void lookAt(const Vec3 eye, const Vec3 center, const Vec3 up, const int width, const int height) {
+    Vec3 n = normalize_to_viewport(eye - center, width, height);
+    Vec3 l = normalize_to_viewport(up.cross(n), width, height);
+    Vec3 m = normalize_to_viewport(n.cross(l), width, height);
+    Matrix<4, 4> m1(l.x(), l.y(), l.z(), 0,
+                    m.x(), m.y(), m.z(), 0,
+                    n.x(), n.y(), n.z(), 0,
+                    0, 0, 0, 1);
+    Matrix<4, 4> m2(1, 0, 0, -center.x(),
+                    0, 1, 0, -center.y(),
+                    0, 0, 1, -center.z(),
+                    0, 0, 0, 1);
+    Modelview = m1 * m2;
+}
 
-    if (total_area < 0) {
-        return;
-    }
+void rasterize(const Vec4 clip[3], std::vector<double>& zbuffer, TGAImage& framebuffer, const TGAColor color) {
+    Vec4 ndc[3]{clip[0] / clip[0].w(), clip[1] / clip[1].w(), clip[2] / clip[2].w()};
+    Vec2 screen[3] = {(Viewport * ndc[0]).xy(), (Viewport * ndc[1]).xy(), (Viewport * ndc[2]).xy()};
 
-    for (int x = vertex_min.x(); x <= vertex_max.x(); ++x) {
-        for (int y = vertex_min.y(); y <= vertex_max.y(); ++y) {
-            const auto alpha = signedTriangleArea(Vec3(x, y, 0), normalized_vertex2, normalized_vertex3) / total_area;
-            const auto beta = signedTriangleArea(Vec3(x, y, 0), normalized_vertex3, normalized_vertex1) / total_area;
-            const auto gamma = signedTriangleArea(Vec3(x, y, 0), normalized_vertex1, normalized_vertex2) / total_area;
+    Matrix<3, 3> ABC(screen[0].x(), screen[0].y(), 1.,
+                     screen[1].x(), screen[1].y(), 1.,
+                     screen[2].x(), screen[2].y(), 1.);
 
-            const unsigned char z = static_cast<unsigned char>(normalized_vertex1.z() * alpha + normalized_vertex2.z() * beta + normalized_vertex3.z() * gamma);
+    auto [bbminx, bbmaxx] = std::minmax({screen[0].x(), screen[1].x(), screen[2].x()});
+    auto [bbminy, bbmaxy] = std::minmax({screen[0].y(), screen[1].y(), screen[2].y()});
+    for (auto x = std::max<std::size_t>(bbminx, 0); x <= std::min<std::size_t>(bbmaxx, framebuffer.width() - 1); ++x) {
+        for (auto y = std::max<std::size_t>(bbminy, 0); y <= std::min<std::size_t>(bbmaxy, framebuffer.height() - 1); ++y) {
+            Vec3 bc = ABC.invert_transpose() * Vec3(static_cast<double>(x), static_cast<double>(y), 1.);
 
-            if (alpha < 0 || beta < 0 || gamma < 0) {
+            if (bc.x() < 0 || bc.y() < 0 || bc.z() < 0)
                 continue;
-            }
 
-            if (z < zbuffer.get(x, y)[0]) {
+            double z = bc * Vec3(ndc[0].z(), ndc[1].z(), ndc[2].z());
+            if (z <= zbuffer[x + y * framebuffer.width()])
                 continue;
-            }
 
+            zbuffer[x + y * framebuffer.width()] = z;
             framebuffer.set(x, y, color);
-            zbuffer.set(x, y, {{z}});
         }
     }
 }
@@ -101,8 +120,12 @@ void drawTriangle(const Vec3& vertex1, const Vec3& vertex2, const Vec3& vertex3,
 int main(int argc, char** argv) {
     constexpr int width = 2000;
     constexpr int height = 2000;
+    const Vec3 eye(-1, 0, 2);   // Camera position
+    const Vec3 center(0, 0, 0); // Camera direction
+    const Vec3 up(0, 1, 0);     // Camera up vector
+
     TGAImage framebuffer(width, height, TGAImage::RGB);
-    TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
+    std::vector<double> zbuffer(width * height, -std::numeric_limits<double>::max());
 
     Model model;
     std::string file_name{"african_head/african_head.obj"};
@@ -111,25 +134,24 @@ int main(int argc, char** argv) {
 
     auto const& vertices = model.getVertices();
     auto const& faces = model.getFaces();
-    for (auto const& indices : faces) {
-        auto const index1 = std::get<0>(indices);
-        auto const index2 = std::get<1>(indices);
-        auto const index3 = std::get<2>(indices);
+    Vec4 clip[3];
 
-        auto const vertex1 = project(perspective(rotate(vertices[index1])), width, height);
-        auto const vertex2 = project(perspective(rotate(vertices[index2])), width, height);
-        auto const vertex3 = project(perspective(rotate(vertices[index3])), width, height);
+    for (const auto& face : faces) {
+        Vec3 v0 = vertices[std::get<0>(face)];
+        Vec3 v1 = vertices[std::get<1>(face)];
+        Vec3 v2 = vertices[std::get<2>(face)];
+        clip[0] = Perspective * Modelview * Vec4{v0.x(), v0.y(), v0.z(), 1.};
+        clip[1] = Perspective * Modelview * Vec4{v1.x(), v1.y(), v1.z(), 1.};
+        clip[2] = Perspective * Modelview * Vec4{v2.x(), v2.y(), v2.z(), 1.};
 
-        TGAColor random_color;
+        TGAColor rnd;
         for (int c = 0; c < 3; c++)
-            random_color[c] = std::rand() % 255;
-
-        drawTriangle(vertex1, vertex2, vertex3, framebuffer, zbuffer, random_color);
+            rnd[c] = std::rand() % 255;
+        rasterize(clip, zbuffer, framebuffer, rnd);
     }
 
     // drawTriangle(Vec3(170, 40, 255), Vec3(550, 390, 255), Vec3(230, 590, 255), framebuffer, red);
 
     framebuffer.write_tga_file("framebuffer.tga");
-    zbuffer.write_tga_file("zbuffer.tga");
     return 0;
 }

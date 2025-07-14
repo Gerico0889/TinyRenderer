@@ -84,6 +84,9 @@ public:
     const double& x() const requires(N >= 2) {
         return data[0];
     }
+    Vector<2> xy() requires(N >= 2) {
+        return Vector<2>(data[0], data[1]);
+    }
 
     // y() is available for N >= 2
     double& y() requires(N >= 2) {
@@ -130,6 +133,14 @@ template <std::size_t N>
 inline Vector<N> operator-(Vector<N> lhs, const Vector<N>& rhs) {
     lhs -= rhs;
     return lhs;
+}
+
+template <std::size_t N>
+double operator*(const Vector<N>& lhs, const Vector<N>& rhs) {
+    double ret = 0;
+    for (int i = N; i--; ret += lhs[i] * rhs[i])
+        ;
+    return ret;
 }
 
 template <std::size_t N>

@@ -9,7 +9,7 @@ class Matrix {
 public:
     Vector<NCol> rows[NRow] = {{}};
 
-    Matrix();
+    Matrix() = default;
     Matrix(const Matrix&) = default;
     Matrix(Matrix&&) = default;
     Matrix& operator=(const Matrix&) = default;
@@ -120,6 +120,17 @@ public:
             }
         }
         return result;
+    }
+
+    Matrix<NRow, NCol> invert_transpose() const {
+        Matrix<NRow, NCol> adjugate_transpose;
+        for (auto i = 0; i < NRow; ++i) {
+            for (auto j = 0; j < NCol; ++j) {
+                adjugate_transpose[i][j] = this->cofactor(i, j);
+            }
+        }
+
+        return adjugate_transpose / (adjugate_transpose[0] * rows[0]);
     }
 };
 
