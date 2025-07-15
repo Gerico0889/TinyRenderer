@@ -68,7 +68,7 @@ Vec3 project(Vec3 vector, int width, int height) {
         (vector.z() + 1.) * 255. / 2};
 };
 
-void viewport(const Vec3& vertex, const int width, const int height) {
+void viewport(const Vec2& vertex, const int width, const int height) {
     Viewport = Matrix<4, 4>(width / 2, 0, 0, vertex.x() + width / 2.,
                             0, height / 2, 0, vertex.y() + height / 2.,
                             0, 0, 1, 0,
@@ -118,8 +118,8 @@ void rasterize(const Vec4 clip[3], std::vector<double>& zbuffer, TGAImage& frame
 }
 
 int main(int argc, char** argv) {
-    constexpr int width = 2000;
-    constexpr int height = 2000;
+    constexpr int width = 800;
+    constexpr int height = 800;
     const Vec3 eye(-1, 0, 2);   // Camera position
     const Vec3 center(0, 0, 0); // Camera direction
     const Vec3 up(0, 1, 0);     // Camera up vector
@@ -131,6 +131,10 @@ int main(int argc, char** argv) {
     std::string file_name{"african_head/african_head.obj"};
     model.loadVerticesFromObj(file_name);
     model.loadFacesFromObjs(file_name);
+
+    lookAt(eye, center, up, width, height);
+    perspective(norm(eye - center));
+    viewport(Vec2(width / 16, height / 16), width * 7 / 8, height * 7 / 8); // build the Viewport    matrix
 
     auto const& vertices = model.getVertices();
     auto const& faces = model.getFaces();
@@ -145,8 +149,9 @@ int main(int argc, char** argv) {
         clip[2] = Perspective * Modelview * Vec4{v2.x(), v2.y(), v2.z(), 1.};
 
         TGAColor rnd;
-        for (int c = 0; c < 3; c++)
+        for (int c = 0; c < 3; c++) {
             rnd[c] = std::rand() % 255;
+        }
         rasterize(clip, zbuffer, framebuffer, rnd);
     }
 

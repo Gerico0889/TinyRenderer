@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <iostream>
 #include <ostream>
 
@@ -122,6 +123,11 @@ public:
 };
 
 /* Non-member operator overloads */
+
+template <std::size_t N>
+double norm(Vector<N> vector) {
+    return std::sqrt(vector * vector);
+}
 
 template <std::size_t N>
 inline Vector<N> operator+(Vector<N> lhs, const Vector<N>& rhs) {

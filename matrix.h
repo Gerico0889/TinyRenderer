@@ -54,7 +54,7 @@ public:
     }
 
     template <std::size_t Row = NRow - 1, std::size_t Col = NCol - 1>
-    Matrix<Row, Col> minorMatrix(const std::size_t row, const std::size_t col) requires(NRow > 1 && NCol > 1) {
+    Matrix<Row, Col> minorMatrix(const std::size_t row, const std::size_t col) const requires(NRow > 1 && NCol > 1) {
         Matrix<Row, Col> result;
 
         auto r = 0;
@@ -80,7 +80,7 @@ public:
     // I don't care about optimization at the moment.
     // It might be useful to optimize the following operations though
 
-    double determinant() requires(NRow > 1 && NRow == NCol) {
+    double determinant() const requires(NRow > 1 && NRow == NCol) {
         double determinant{};
         for (auto col = 0; col < NRow; ++col) {
             double sign = ((col % 2) == 0) ? 1 : -1;
@@ -91,7 +91,7 @@ public:
     }
 
     // Base case
-    double determinant() requires(NRow == 1 && NCol == 1) {
+    double determinant() const requires(NRow == 1 && NCol == 1) {
         return rows[0][0];
     }
 
