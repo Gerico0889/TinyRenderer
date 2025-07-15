@@ -4,7 +4,7 @@
 #include "vector.h"
 
 #include <algorithm>
-#include <cmath>
+#include <limits>
 
 constexpr TGAColor white = {{255, 255, 255, 255}}; // attention, BGRA order
 constexpr TGAColor green = {{0, 255, 0, 255}};
@@ -14,46 +14,6 @@ constexpr TGAColor yellow = {{0, 200, 255, 255}};
 
 Matrix<4, 4> Viewport, Modelview, Perspective;
 
-Vec3 normalize_to_viewport(const Vec3& vertex, const int width, const int height) {
-    if (vertex.x() < -1 || vertex.x() > 1 || vertex.y() < -1 || vertex.y() > 1 || vertex.z() < -1 || vertex.z() > 1) {
-        return vertex;
-    }
-
-    float const normalized_x = (vertex.x() + 1) * 0.5 * width;
-    float const normalized_y = (vertex.y() + 1) * 0.5 * width;
-    float const normalized_z = (vertex.z() + 1) * 0.5 * 255;
-
-    return Vec3(normalized_x, normalized_y, normalized_z);
-}
-
-std::pair<Vec3, Vec3> findBoundingBox(const Vec3& vertex1, const Vec3& vertex2, const Vec3& vertex3) {
-    auto const min_x = std::min({vertex1.x(), vertex2.x(), vertex3.x()});
-    auto const min_y = std::min({vertex1.y(), vertex2.y(), vertex3.y()});
-    auto const max_x = std::max({vertex1.x(), vertex2.x(), vertex3.x()});
-    auto const max_y = std::max({vertex1.y(), vertex2.y(), vertex3.y()});
-
-    return {Vec3(min_x, min_y, 0), Vec3(max_x, max_y, 0)};
-}
-
-double signedTriangleArea(const Vec3& vertex1, const Vec3& vertex2, const Vec3& vertex3) {
-    const auto ax = vertex1.x();
-    const auto ay = vertex1.y();
-    const auto bx = vertex2.x();
-    const auto by = vertex2.y();
-    const auto cx = vertex3.x();
-    const auto cy = vertex3.y();
-
-    return 0.5 * ((by - ay) * (bx + ax) + (cy - by) * (cx + bx) + (ay - cy) * (ax + cx));
-}
-
-Vec3 rotate(Vec3 vector) {
-    const double angle = M_PI / 6;
-    const Matrix<3, 3> y_rotation(std::cos(angle), 0, std::sin(angle),
-                                  0, 1, 0,
-                                  -std::sin(angle), 0, std::cos(angle));
-    return y_rotation * vector;
-}
-
 void perspective(const double focal) {
     Perspective = Matrix<4, 4>(1, 0, 0, 0,
                                0, 1, 0, 0,
@@ -61,24 +21,18 @@ void perspective(const double focal) {
                                0, 0, -1 / focal, 1);
 }
 
-Vec3 project(Vec3 vector, int width, int height) {
-    return {
-        (vector.x() + 1.) * width / 2,
-        (vector.y() + 1.) * height / 2,
-        (vector.z() + 1.) * 255. / 2};
-};
-
-void viewport(const Vec2& vertex, const int width, const int height) {
-    Viewport = Matrix<4, 4>(width / 2, 0, 0, vertex.x() + width / 2.,
-                            0, height / 2, 0, vertex.y() + height / 2.,
-                            0, 0, 1, 0,
-                            0, 0, 0, 1);
+void viewport(const int x, const int y, const int w, const int h) {
+    Viewport = Matrix<4, 4>(
+        w / 2.0, 0, 0, w / 2.0,
+        0, h / 2.0, 0, h / 2.0,
+        0, 0, 1.0, 0,
+        0, 0, 0, 1.0);
 }
 
-void lookAt(const Vec3 eye, const Vec3 center, const Vec3 up, const int width, const int height) {
-    Vec3 n = normalize_to_viewport(eye - center, width, height);
-    Vec3 l = normalize_to_viewport(up.cross(n), width, height);
-    Vec3 m = normalize_to_viewport(n.cross(l), width, height);
+void lookAt(const Vec3 eye, const Vec3 center, const Vec3 up) {
+    Vec3 n = normalize(eye - center);
+    Vec3 l = normalize(up.cross(n));
+    Vec3 m = normalize(n.cross(l));
     Matrix<4, 4> m1(l.x(), l.y(), l.z(), 0,
                     m.x(), m.y(), m.z(), 0,
                     n.x(), n.y(), n.z(), 0,
@@ -94,9 +48,16 @@ void rasterize(const Vec4 clip[3], std::vector<double>& zbuffer, TGAImage& frame
     Vec4 ndc[3]{clip[0] / clip[0].w(), clip[1] / clip[1].w(), clip[2] / clip[2].w()};
     Vec2 screen[3] = {(Viewport * ndc[0]).xy(), (Viewport * ndc[1]).xy(), (Viewport * ndc[2]).xy()};
 
-    Matrix<3, 3> ABC(screen[0].x(), screen[0].y(), 1.,
-                     screen[1].x(), screen[1].y(), 1.,
-                     screen[2].x(), screen[2].y(), 1.);
+    Matrix<3, 3> ABC(
+        screen[0].x(), screen[1].x(), screen[2].x(), // First row: all x values
+        screen[0].y(), screen[1].y(), screen[2].y(), // Second row: all y values
+        1.0, 1.0, 1.0                                // Third row: all ones
+    );
+
+    // Backface culling
+    if (ABC.determinant() < 1) {
+        return;
+    }
 
     auto [bbminx, bbmaxx] = std::minmax({screen[0].x(), screen[1].x(), screen[2].x()});
     auto [bbminy, bbmaxy] = std::minmax({screen[0].y(), screen[1].y(), screen[2].y()});
@@ -132,15 +93,15 @@ int main(int argc, char** argv) {
     model.loadVerticesFromObj(file_name);
     model.loadFacesFromObjs(file_name);
 
-    lookAt(eye, center, up, width, height);
+    lookAt(eye, center, up);
     perspective(norm(eye - center));
-    viewport(Vec2(width / 16, height / 16), width * 7 / 8, height * 7 / 8); // build the Viewport    matrix
+    viewport(width / 16, height / 16, width * 7 / 8, height * 7 / 8); // build the Viewport matrix
 
     auto const& vertices = model.getVertices();
     auto const& faces = model.getFaces();
-    Vec4 clip[3];
 
     for (const auto& face : faces) {
+        Vec4 clip[3];
         Vec3 v0 = vertices[std::get<0>(face)];
         Vec3 v1 = vertices[std::get<1>(face)];
         Vec3 v2 = vertices[std::get<2>(face)];
@@ -154,8 +115,6 @@ int main(int argc, char** argv) {
         }
         rasterize(clip, zbuffer, framebuffer, rnd);
     }
-
-    // drawTriangle(Vec3(170, 40, 255), Vec3(550, 390, 255), Vec3(230, 590, 255), framebuffer, red);
 
     framebuffer.write_tga_file("framebuffer.tga");
     return 0;

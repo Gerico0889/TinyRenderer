@@ -79,20 +79,51 @@ public:
 
     // I don't care about optimization at the moment.
     // It might be useful to optimize the following operations though
-
     double determinant() const requires(NRow > 1 && NRow == NCol) {
-        double determinant{};
-        for (auto col = 0; col < NRow; ++col) {
-            double sign = ((col % 2) == 0) ? 1 : -1;
-            determinant += sign * rows[0][col] * minorMatrix(0, col).determinant();
+        if (NRow == 2) {
+            // Fast path for 2x2 matrices
+            return rows[0][0] * rows[1][1] - rows[0][1] * rows[1][0];
         }
 
-        return determinant;
+        double result = 0;
+        for (std::size_t j = 0; j < NCol; j++) {
+            double cofactor = rows[0][j];
+            // Apply the alternating sign pattern: + - + - ...
+            if (j % 2)
+                cofactor = -cofactor;
+
+            // Calculate the minor determinant
+            result += cofactor * minorDeterminant(0, j);
+        }
+        return result;
     }
 
     // Base case
     double determinant() const requires(NRow == 1 && NCol == 1) {
         return rows[0][0];
+    }
+
+    double minorDeterminant(std::size_t row, std::size_t col) const requires(NRow > 1 && NRow == NCol) {
+        // Create the minor matrix (size one less than the original)
+        Matrix<NRow - 1, NCol - 1> minor;
+
+        // Fill the minor matrix by skipping the specified row and column
+        std::size_t minorRow = 0;
+        for (std::size_t i = 0; i < NRow; i++) {
+            if (i == row)
+                continue;
+
+            std::size_t minorCol = 0;
+            for (std::size_t j = 0; j < NCol; j++) {
+                if (j == col)
+                    continue;
+                minor[minorRow][minorCol] = rows[i][j];
+                minorCol++;
+            }
+            minorRow++;
+        }
+
+        return minor.determinant();
     }
 
     Matrix<NRow, NCol> adjucate() const {

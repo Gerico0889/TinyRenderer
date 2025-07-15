@@ -130,6 +130,11 @@ double norm(Vector<N> vector) {
 }
 
 template <std::size_t N>
+Vector<N> normalize(const Vector<N>& vector) {
+    return vector / norm(vector);
+}
+
+template <std::size_t N>
 inline Vector<N> operator+(Vector<N> lhs, const Vector<N>& rhs) {
     lhs += rhs;
     return lhs;
