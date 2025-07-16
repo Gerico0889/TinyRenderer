@@ -15,32 +15,25 @@ constexpr TGAColor yellow = {{0, 200, 255, 255}};
 Matrix<4, 4> Viewport, Modelview, Perspective;
 
 void perspective(const double focal) {
-    Perspective = Matrix<4, 4>{{{1, 0, 0, 0},
-                                {0, 1, 0, 0},
-                                {0, 0, 1, 0},
-                                {0, 0, -1 / focal, 1}}};
+    Perspective = {{{1, 0, 0, 0},
+                    {0, 1, 0, 0},
+                    {0, 0, 1, 0},
+                    {0, 0, -1 / focal, 1}}};
 }
 
 void viewport(const int x, const int y, const int w, const int h) {
-    Viewport = Matrix<4, 4>{{{w / 2.0, 0, 0, w / 2.0},
-                             {0, h / 2.0, 0, h / 2.0},
-                             {0, 0, 1.0, 0},
-                             {0, 0, 0, 1.0}}};
+    Viewport = {{{w / 2., 0, 0, x + w / 2.},
+                 {0, h / 2., 0, y + h / 2.},
+                 {0, 0, 1, 0},
+                 {0, 0, 0, 1}}};
 }
 
 void lookAt(const Vec3& eye, const Vec3& center, const Vec3& up) {
     Vec3 n = normalized(eye - center);
     Vec3 l = normalized(cross(up, n));
     Vec3 m = normalized(cross(n, l));
-    Matrix<4, 4> m1{{{l.x, l.y, l.z, 0},
-                     {m.x, m.y, m.z, 0},
-                     {n.x, n.y, n.z, 0},
-                     {0, 0, 0, 1}}};
-    Matrix<4, 4> m2{{{1, 0, 0, -center.x},
-                     {0, 1, 0, -center.y},
-                     {0, 0, 1, -center.z},
-                     {0, 0, 0, 1}}};
-    Modelview = m1 * m2;
+    Modelview = Matrix<4, 4>{{{l.x, l.y, l.z, 0}, {m.x, m.y, m.z, 0}, {n.x, n.y, n.z, 0}, {0, 0, 0, 1}}}
+                * Matrix<4, 4>{{{1, 0, 0, -center.x}, {0, 1, 0, -center.y}, {0, 0, 1, -center.z}, {0, 0, 0, 1}}};
 }
 
 void rasterize(const Vec4 clip[3], std::vector<double>& zbuffer, TGAImage& framebuffer, const TGAColor color) {
@@ -51,13 +44,12 @@ void rasterize(const Vec4 clip[3], std::vector<double>& zbuffer, TGAImage& frame
         (Viewport * ndc[2]).xy(),
     };
 
-    Matrix<3, 3> ABC{{{screen[0].x, screen[1].x, screen[2].x},
-                      {screen[0].y, screen[1].y, screen[2].y},
-                      {1.0, 1.0, 1.0}}};
+    Matrix<3, 3> ABC{{{screen[0].x, screen[0].y, 1.0},
+                      {screen[1].x, screen[1].y, 1.0},
+                      {screen[2].x, screen[2].y, 1.0}}};
 
     // Backface culling
     if (ABC.det() < 1) {
-        std::cout << "It's 0\n";
         return;
     }
 
@@ -107,9 +99,12 @@ int main(int argc, char** argv) {
         Vec3 v0 = vertices[std::get<0>(face)];
         Vec3 v1 = vertices[std::get<1>(face)];
         Vec3 v2 = vertices[std::get<2>(face)];
-        clip[0] = Perspective * Modelview * Vec4{v0.x, v0.y, v0.z, 1.};
-        clip[1] = Perspective * Modelview * Vec4{v1.x, v1.y, v1.z, 1.};
-        clip[2] = Perspective * Modelview * Vec4{v2.x, v2.y, v2.z, 1.};
+
+        auto composed_matrix = Perspective * Modelview;
+
+        clip[0] = composed_matrix * Vec4{v0.x, v0.y, v0.z, 1.};
+        clip[1] = composed_matrix * Vec4{v1.x, v1.y, v1.z, 1.};
+        clip[2] = composed_matrix * Vec4{v2.x, v2.y, v2.z, 1.};
 
         TGAColor rnd;
         for (int c = 0; c < 3; c++) {
