@@ -1,191 +1,166 @@
 #pragma once
-
-#include <array>
 #include <cassert>
 #include <cmath>
 #include <iostream>
-#include <ostream>
 
-template <std::size_t N>
-class Vector {
-public:
-    std::array<double, N> data; // Encapsulation is barely a concern here
+template <int N>
+struct Vector {
+    double data[N] = {0};
 
-    Vector() {
-        data.fill(0.0);
+    double& operator[](const int i) {
+        assert(i >= 0 && i < N);
+        return data[i];
     }
-
-    template <typename... Args, typename = std::enable_if<sizeof...(Args) == N && (std::is_convertible_v<Args, double> && ...)>>
-    Vector(Args... args)
-        : data{{static_cast<double>(args)...}} {
-    }
-
-    Vector(const Vector&) = default;
-    Vector(Vector&&) = default;
-    Vector& operator=(const Vector&) = default;
-    Vector& operator=(Vector&) = default;
-    ~Vector() = default;
-
-    double dot(const Vector& vector) const {
-        double result = 0.0;
-        for (std::size_t i = 0; i < N; ++i) {
-            result += data[i] * vector.data[i];
-        }
-        return result;
-    }
-
-    Vector& operator+=(const Vector& other) {
-        for (std::size_t i = 0; i < N; ++i) {
-            data[i] += other.data[i];
-        }
-        return *this;
-    }
-
-    Vector& operator-=(const Vector& other) {
-        for (std::size_t i = 0; i < N; ++i) {
-            data[i] -= other.data[i];
-        }
-        return *this;
-    }
-
-    Vector& operator*=(double scalar) {
-        for (std::size_t i = 0; i < N; ++i) {
-            data[i] *= scalar;
-        }
-        return *this;
-    }
-
-    Vector& operator/=(double scalar) {
-        for (std::size_t i = 0; i < N; ++i) {
-            data[i] /= scalar;
-        }
-        return *this;
-    }
-
-    double& operator[](std::size_t index) {
-        assert(index >= 0 && index <= N);
-        return data[index];
-    }
-
-    const double& operator[](std::size_t index) const {
-        assert(index >= 0 && index <= N);
-        return data[index];
-    }
-
-    static Vector zero() {
-        return Vector();
-    }
-
-    /* Dimension specific accessors */
-
-    // x() is available for N >= 2
-    double& x() requires(N >= 2) {
-        return data[0];
-    }
-    const double& x() const requires(N >= 2) {
-        return data[0];
-    }
-    Vector<2> xy() requires(N >= 2) {
-        return Vector<2>(data[0], data[1]);
-    }
-
-    // y() is available for N >= 2
-    double& y() requires(N >= 2) {
-        return data[1];
-    }
-    const double& y() const requires(N >= 2) {
-        return data[1];
-    }
-
-    // z() is available for N >= 3
-    double& z() requires(N >= 3) {
-        return data[2];
-    }
-    const double& z() const requires(N >= 3) {
-        return data[2];
-    }
-
-    // w() is available for N >= 4
-    double& w() requires(N >= 4) {
-        return data[3];
-    }
-    const double& w() const requires(N >= 4) {
-        return data[3];
-    }
-
-    // Cross product (only for N == 3)
-    Vector<3> cross(const Vector<3>& other) const requires(N == 3) {
-        return Vector<3>(
-            data[1] * other.data[2] - data[2] * other.data[1],
-            data[2] * other.data[0] - data[0] * other.data[2],
-            data[0] * other.data[1] - data[1] * other.data[0]);
+    double operator[](const int i) const {
+        assert(i >= 0 && i < N);
+        return data[i];
     }
 };
 
-/* Non-member operator overloads */
-
-template <std::size_t N>
-double norm(Vector<N> vector) {
-    return std::sqrt(vector * vector);
-}
-
-template <std::size_t N>
-Vector<N> normalize(const Vector<N>& vector) {
-    return vector / norm(vector);
-}
-
-template <std::size_t N>
-inline Vector<N> operator+(Vector<N> lhs, const Vector<N>& rhs) {
-    lhs += rhs;
-    return lhs;
-}
-
-template <std::size_t N>
-inline Vector<N> operator-(Vector<N> lhs, const Vector<N>& rhs) {
-    lhs -= rhs;
-    return lhs;
-}
-
-template <std::size_t N>
+template <int N>
 double operator*(const Vector<N>& lhs, const Vector<N>& rhs) {
     double ret = 0;
-    for (int i = N; i--; ret += lhs[i] * rhs[i])
-        ;
+    for (int i = 0; i < N; ++i) {
+        ret += lhs[i] * rhs[i];
+    }
     return ret;
 }
 
-template <std::size_t N>
-inline Vector<N> operator*(Vector<N> lhs, double scalar) {
-    lhs *= scalar;
-    return lhs;
-}
-
-template <std::size_t N>
-inline Vector<N> operator*(double scalar, Vector<N> rhs) {
-    rhs *= scalar;
-    return rhs;
-}
-
-template <std::size_t N>
-inline Vector<N> operator/(Vector<N> lhs, double scalar) {
-    if (scalar == 0) {
-        std::cerr << "Err: division by 0";
-        return lhs; // Better handle this case instead of returning lhs
+template <int N>
+Vector<N> operator+(const Vector<N>& lhs, const Vector<N>& rhs) {
+    Vector<N> ret = lhs;
+    for (int i = 0; i < N; ++i) {
+        ret[i] += rhs[i];
     }
-    lhs /= scalar;
-    return lhs;
+    return ret;
 }
 
-template <std::size_t N>
-inline std::ostream& operator<<(std::ostream& os, const Vector<N>& vec) {
-    os << "Vector" << N << "(";
-    for (std::size_t i = 0; i < N; ++i) {
-        os << vec.data[i] << (i == N - 1 ? "" : ", ");
+template <int N>
+Vector<N> operator-(const Vector<N>& lhs, const Vector<N>& rhs) {
+    Vector<N> ret = lhs;
+    for (int i = 0; i < N; ++i) {
+        ret[i] -= rhs[i];
     }
-    os << ")";
-    return os;
+    return ret;
 }
 
-using Vec2 = Vector<2>;
-using Vec3 = Vector<3>;
-using Vec4 = Vector<4>;
+template <int N>
+Vector<N> operator*(const Vector<N>& lhs, const double& rhs) {
+    Vector<N> ret = lhs;
+    for (int i = 0; i < N; ++i) {
+        ret[i] *= rhs;
+    }
+    return ret;
+}
+
+template <int N>
+Vector<N> operator*(const double& lhs, const Vector<N>& rhs) {
+    return rhs * lhs;
+}
+
+template <int N>
+Vector<N> operator/(const Vector<N>& lhs, const double& rhs) {
+    Vector<N> ret = lhs;
+    for (int i = 0; i < N; ++i) {
+        ret[i] /= rhs;
+    }
+    return ret;
+}
+
+template <int N>
+std::ostream& operator<<(std::ostream& out, const Vector<N>& v) {
+    for (int i = 0; i < N; ++i) {
+        out << v[i] << " ";
+    }
+    return out;
+}
+
+// Specializations for 2D, 3D, and 4D Vectors
+
+template <>
+struct Vector<2> {
+    double x = 0, y = 0;
+
+    double& operator[](const int i) {
+        assert(i >= 0 && i < 2);
+        return i ? y : x;
+    }
+    double operator[](const int i) const {
+        assert(i >= 0 && i < 2);
+        return i ? y : x;
+    }
+};
+
+template <>
+struct Vector<3> {
+    double x = 0, y = 0, z = 0;
+
+    double& operator[](const int i) {
+        assert(i >= 0 && i < 3);
+        if (i == 0)
+            return x;
+        if (i == 1)
+            return y;
+        return z;
+    }
+    double operator[](const int i) const {
+        assert(i >= 0 && i < 3);
+        if (i == 0)
+            return x;
+        if (i == 1)
+            return y;
+        return z;
+    }
+};
+
+template <>
+struct Vector<4> {
+    double x = 0, y = 0, z = 0, w = 0;
+
+    double& operator[](const int i) {
+        assert(i >= 0 && i < 4);
+        if (i == 0)
+            return x;
+        if (i == 1)
+            return y;
+        if (i == 2)
+            return z;
+        return w;
+    }
+    double operator[](const int i) const {
+        assert(i >= 0 && i < 4);
+        if (i == 0)
+            return x;
+        if (i == 1)
+            return y;
+        if (i == 2)
+            return z;
+        return w;
+    }
+    Vector<2> xy() const {
+        return {x, y};
+    }
+    Vector<3> xyz() const {
+        return {x, y, z};
+    }
+};
+
+typedef Vector<2> Vec2;
+typedef Vector<3> Vec3;
+typedef Vector<4> Vec4;
+
+template <int N>
+double norm(const Vector<N>& v) {
+    return std::sqrt(v * v);
+}
+
+template <int N>
+Vector<N> normalized(const Vector<N>& v) {
+    return v / norm(v);
+}
+
+inline Vec3 cross(const Vec3& v1, const Vec3& v2) {
+    return {v1.y * v2.z - v1.z * v2.y,
+            v1.z * v2.x - v1.x * v2.z,
+            v1.x * v2.y - v1.y * v2.x};
+}
