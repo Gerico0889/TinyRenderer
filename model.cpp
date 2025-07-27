@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 void Model::loadVerticesFromObj(const std::string& file_name) {
     std::ifstream model_file{"obj/" + file_name};
@@ -30,10 +31,12 @@ void Model::loadFacesFromObjs(const std::string& file_name) {
         return;
     }
 
-    std::string line{};
-    while (std::getline(model_file, line)) {
-        if (line == "s 1") {
-            break;
+    {
+        std::string line{};
+        while (std::getline(model_file, line)) {
+            if (line == "s 1") {
+                break;
+            }
         }
     }
 
@@ -46,12 +49,39 @@ void Model::loadFacesFromObjs(const std::string& file_name) {
     }
 }
 
+void Model::loadNormalsFromObj(const std::string& file_name) {
+    std::ifstream model_file{"obj/" + file_name};
+
+    if (!model_file) {
+        std::cerr << "Could not find file!\n";
+        return;
+    }
+
+    // With this we're going through the whole file
+    // even when we're done with parsing normals.
+    // Do I care at the moment? No
+    std::string line{};
+    while (std::getline(model_file, line)) {
+        if (line.substr(0, 2) == "vn") {
+            std::istringstream iss(line.substr(3));
+            float x, y, z;
+            if (iss >> x >> y >> z) {
+                _normals.emplace_back(x, y, z);
+            }
+        }
+    }
+}
+
 int Model::parseFaceIndex(const std::string& face) {
     return std::stoi(face.substr(0, face.find('/'))) - 1;
 }
 
 std::vector<Vec3> Model::getVertices() {
     return _vertices;
+}
+
+std::vector<Vec3> Model::getNormals() {
+    return _normals;
 }
 
 std::vector<std::tuple<int, int, int>> Model::getFaces() {

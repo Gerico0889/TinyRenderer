@@ -16,6 +16,7 @@ int main(int argc, char** argv) {
     std::string file_name{"african_head/african_head.obj"};
     model.loadVerticesFromObj(file_name);
     model.loadFacesFromObjs(file_name);
+    model.loadNormalsFromObj(file_name);
 
     lookAt(eye, center, up);
     perspective(norm(eye - center));
@@ -23,6 +24,7 @@ int main(int argc, char** argv) {
 
     auto const& vertices = model.getVertices();
     auto const& faces = model.getFaces();
+    auto const& normals = model.getNormals();
 
     for (const auto& face : faces) {
         Vec4 clip[3];
