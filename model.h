@@ -15,12 +15,14 @@ public:
     void loadNormalsFromObj(const std::string& file_name);
     std::vector<Vec3> getVertices();
     std::vector<Vec3> getNormals();
-    std::vector<std::tuple<int, int, int>> getFaces();
+    std::vector<std::tuple<int, int, int>> getVertexFaces();
+    std::vector<std::tuple<int, int, int>> getNormalFaces();
 
 private:
     int parseFaceIndex(const std::string& face);
 
     std::vector<Vec3> _vertices;
     std::vector<Vec3> _normals;
-    std::vector<std::tuple<int, int, int>> _faces;
+    std::vector<std::tuple<int, int, int>> _vertexFaces;
+    std::vector<std::tuple<int, int, int>> _normalFaces;
 };

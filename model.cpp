@@ -23,6 +23,16 @@ void Model::loadVerticesFromObj(const std::string& file_name) {
     }
 }
 
+std::pair<int, int> parseFaceIndices(const std::string& face) {
+    size_t first_slash = face.find('/');
+    size_t second_slash = face.find('/', first_slash + 1);
+
+    int vertex_index = std::stoi(face.substr(0, first_slash)) - 1;
+    int normal_index = std::stoi(face.substr(second_slash + 1)) - 1;
+
+    return {vertex_index, normal_index};
+}
+
 void Model::loadFacesFromObjs(const std::string& file_name) {
     std::ifstream model_file{"obj/" + file_name};
 
@@ -44,7 +54,12 @@ void Model::loadFacesFromObjs(const std::string& file_name) {
     std::string face1, face2, face3;
     while (model_file >> first_char >> face1 >> face2 >> face3) {
         if (first_char == 'f') {
-            _faces.emplace_back(parseFaceIndex(face1), parseFaceIndex(face2), parseFaceIndex(face3));
+            auto [v1, n1] = parseFaceIndices(face1);
+            auto [v2, n2] = parseFaceIndices(face2);
+            auto [v3, n3] = parseFaceIndices(face3);
+
+            _vertexFaces.emplace_back(v1, v2, v3);
+            _normalFaces.emplace_back(n1, n2, n3);
         }
     }
 }
@@ -72,10 +87,6 @@ void Model::loadNormalsFromObj(const std::string& file_name) {
     }
 }
 
-int Model::parseFaceIndex(const std::string& face) {
-    return std::stoi(face.substr(0, face.find('/'))) - 1;
-}
-
 std::vector<Vec3> Model::getVertices() {
     return _vertices;
 }
@@ -84,6 +95,6 @@ std::vector<Vec3> Model::getNormals() {
     return _normals;
 }
 
-std::vector<std::tuple<int, int, int>> Model::getFaces() {
-    return _faces;
+std::vector<std::tuple<int, int, int>> Model::getVertexFaces() {
+    return _vertexFaces;
 }

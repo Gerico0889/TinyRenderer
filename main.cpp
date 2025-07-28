@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
     viewport(width / 16, height / 16, width * 7 / 8, height * 7 / 8); // build the Viewport matrix
 
     auto const& vertices = model.getVertices();
-    auto const& faces = model.getFaces();
+    auto const& faces = model.getVertexFaces();
     auto const& normals = model.getNormals();
 
     for (const auto& face : faces) {
